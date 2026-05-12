@@ -1091,15 +1091,7 @@ function renderModelDropdown(){
       }
     }
     const matches=(m)=>!term||found.has(m.value);
-    const configuredModels=_modelData
-      .filter(m=>m.badge&&matches(m))
-      .sort((a,b)=>{
-        const configuredRankA=_configuredRank(a.badge);
-        const configuredRankB=_configuredRank(b.badge);
-        if(configuredRankA!==configuredRankB) return configuredRankA-configuredRankB;
-        return a.name.localeCompare(b.name);
-      });
-    const configuredIds=new Set(configuredModels.map(m=>m.value));
+    const _defaultModel=window._defaultModel||null;
     // Clear and rebuild
     dd.innerHTML='';
     // Add search and custom elements first (CRITICAL: must be before models)
@@ -1107,36 +1099,14 @@ function renderModelDropdown(){
     dd.appendChild(_searchRow);
     dd.appendChild(_custSep);
     dd.appendChild(_custRow);
-    if(configuredModels.length){
-      const configuredHeading=document.createElement('div');
-      configuredHeading.className='model-group';
-      configuredHeading.textContent=t('model_group_configured')||'Configured';
-      dd.appendChild(configuredHeading);
-      for(const m of configuredModels){
-        const row=document.createElement('div');
-        row.className='model-opt'+(m.value===sel.value?' active':'');
-        // Add provider info to badge label (e.g., "Primary (jingdong)")
-        let badgeLabel=m.badge?(m.badge.label||'Configured'):'';
-        if(m.badge&&m.badge.provider){
-          const providerName=m.badge.provider.replace(/^custom:/,'').split('/')[0];
-          badgeLabel+=` (${providerName})`;
-        }
-        const badgeHtml=m.badge?`<span class="model-opt-badge model-opt-badge--${esc(m.badge.role||'configured')}">${esc(badgeLabel)}</span>`:'';
-        row.innerHTML=`<div class="model-opt-top"><span class="model-opt-name">${m.name}</span>${badgeHtml}</div><span class="model-opt-id">${m.id}</span>`;
-        row.onclick=()=>selectModelFromDropdown(m.value);
-        dd.appendChild(row);
-      }
-    }
-    // Add remaining models matching filter
+    // Render all models in a unified list grouped by provider
     let _lastGroup=null;
-    // Count models per group for heading labels (#1425)
     const _groupCounts={};
     for(const m of _modelData){
-      if(configuredIds.has(m.value)) continue;
-      if(m.group) _groupCounts[m.group]=(_groupCounts[m.group]||0)+1;
+      if(m.group&&matches(m)) _groupCounts[m.group]=(_groupCounts[m.group]||0)+1;
     }
     for(const m of _modelData){
-      if(configuredIds.has(m.value)||!matches(m)) continue;
+      if(!matches(m)) continue;
       if(m.group&&m.group!==_lastGroup){
         const heading=document.createElement('div');
         heading.className='model-group';
@@ -1147,7 +1117,19 @@ function renderModelDropdown(){
       }
       const row=document.createElement('div');
       row.className='model-opt'+(m.value===sel.value?' active':'');
-      const badgeHtml=m.badge?`<span class="model-opt-badge model-opt-badge--${esc(m.badge.role||'configured')}">${esc(m.badge.label||'Configured')}</span>`:'';
+      // Build badge: show fallback/configured badges or Default tag.
+      // Skip "primary" badge — it's redundant with the Default tag.
+      let badgeHtml='';
+      if(m.badge&&m.badge.role!=='primary'){
+        let badgeLabel=m.badge.label||'Configured';
+        if(m.badge.provider){
+          const providerName=m.badge.provider.replace(/^custom:/,'').split('/')[0];
+          badgeLabel+=` (${providerName})`;
+        }
+        badgeHtml=`<span class="model-opt-badge model-opt-badge--${esc(m.badge.role||'configured')}">${esc(badgeLabel)}</span>`;
+      }else if(_defaultModel&&m.value===_defaultModel){
+        badgeHtml=`<span class="model-opt-badge model-opt-badge--default">${esc(t('usage_default_model')||'default')}</span>`;
+      }
       // Inline provider chip on every row that has a group (#1425)
       const providerChip=m.group?`<span class="model-opt-provider">${esc(m.group)}</span>`:'';
       row.innerHTML=`<div class="model-opt-top"><span class="model-opt-name">${m.name}</span>${badgeHtml}${providerChip}</div><span class="model-opt-id">${m.id}</span>`;
