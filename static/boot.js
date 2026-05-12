@@ -1391,8 +1391,20 @@ function applyBotName(){
     if(s.default_workspace) S._profileDefaultWorkspace=s.default_workspace;
     window._sessionJumpButtonsEnabled=!!s.session_jump_buttons;
     const appearance=_normalizeAppearance(s.theme,s.skin);
+    // Preserve local 'system' theme if the API returns the resolved 'dark'/'light'.
+    // The inline script in index.html already applied the correct CSS class for
+    // the initial paint; here we just need to set up the MediaQuery listener.
+    const _localTheme=localStorage.getItem('hermes-theme');
+    const _useLocalTheme=_localTheme==='system'&&appearance.theme!=='system';
+    if(_useLocalTheme) appearance.theme='system';
     localStorage.setItem('hermes-theme',appearance.theme);
     _applyTheme(appearance.theme);
+    // Preserve local skin if the API returns 'default' but the user has a
+    // non-default skin saved locally (autosave may not have completed yet).
+    const _localSkin=localStorage.getItem('hermes-skin');
+    if(appearance.skin==='default'&&_localSkin&&_localSkin!=='default'){
+      appearance.skin=_localSkin;
+    }
     localStorage.setItem('hermes-skin',appearance.skin);
     _applySkin(appearance.skin);
     const fontSize=(s.font_size||localStorage.getItem('hermes-font-size')||'default');
