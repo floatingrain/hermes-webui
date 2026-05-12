@@ -1117,9 +1117,10 @@ function renderModelDropdown(){
       }
       const row=document.createElement('div');
       row.className='model-opt'+(m.value===sel.value?' active':'');
-      // Build badge: show configured badge (primary/fallback) or Default tag
+      // Build badge: show fallback/configured badges or Default tag.
+      // Skip "primary" badge — it's redundant with the Default tag.
       let badgeHtml='';
-      if(m.badge){
+      if(m.badge&&m.badge.role!=='primary'){
         let badgeLabel=m.badge.label||'Configured';
         if(m.badge.provider){
           const providerName=m.badge.provider.replace(/^custom:/,'').split('/')[0];
